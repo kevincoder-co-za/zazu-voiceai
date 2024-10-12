@@ -16,6 +16,7 @@
     </video>
     <br /><br />
 
+    <input type="password" id="password" placeholder="Enter secret access token here" value="" />
     <button id="start">Start Streaming</button>
     <button id="stop">Stop Streaming</button>
     <audio id="audio-player" controls style="display: none;"></audio>
@@ -27,7 +28,8 @@
         let audioPlayer = document.getElementById('audio-player');
 
         document.getElementById('start').addEventListener('click', async () => {
-            websocket = new WebSocket("{{socket_url}}");
+            token = document.getElementById("password").value;
+            websocket = new WebSocket("{{socket_url}}/" + token);
 
             websocket.onopen = () => {
                 console.log("WebSocket connected");

@@ -16,7 +16,7 @@ def dialer():
         socket_url = settings.SOCKET_URL
     )
 
-@sockets.route("/websocket/stream")
+@sockets.route("/websocket/stream/<token>")
 def audio_stream(ws):
     audio_handler = None
     llm = None
