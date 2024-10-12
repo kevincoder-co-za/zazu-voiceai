@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Audio Stream to WebSocket</title>
+</head>
+<body>
+    <h1>Talk with Zazu</h1>
+
+
+
+    <video width="1080" height="700" autoplay loop muted>
+        <source src="https://d21zxzt5wy6hlq.cloudfront.net/t2v/20241005_3883421ab5252a.mp4" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+    <br /><br />
+
+    <button id="start">Start Streaming</button>
+    <button id="stop">Stop Streaming</button>
+    <audio id="audio-player" controls style="display: none;"></audio>
+
+    <script>
+        let websocket;
+        let audioContext;
+        let processor;
+        let audioPlayer = document.getElementById('audio-player');
+
+        document.getElementById('start').addEventListener('click', async () => {
+            websocket = new WebSocket("{{socket_url}}");
+
+            websocket.onopen = () => {
+                console.log("WebSocket connected");
+                websocket.send("start call");
+            };
+
+            websocket.onmessage = (event) => {
+                if (event.data instanceof Blob) {
+                    const audioUrl = URL.createObjectURL(event.data);
+                    audioPlayer.src = audioUrl;
+                    audioPlayer.style.display = "block";
+                    audioPlayer.play();
+                }
+            };
+
+            websocket.onerror = (error) => {
+                console.error("WebSocket error:", error);
+            };
+
+            const wantedRate = {{sample_rate}};
+
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            audioContext = new AudioContext({ sampleRate: 48000 });
+            const source = audioContext.createMediaStreamSource(stream);
+            processor = audioContext.createScriptProcessor(4096, 1, 1);
+            
+            processor.onaudioprocess = async (e) => {
+                const inputBuffer = e.inputBuffer.getChannelData(0);
+            
+                // Resample to 16000 Hz using OfflineAudioContext
+                const offlineContext = new OfflineAudioContext(1, inputBuffer.length * wantedRate / audioContext.sampleRate, wantedRate);
+                const buffer = offlineContext.createBuffer(1, inputBuffer.length, audioContext.sampleRate);
+                buffer.copyToChannel(inputBuffer, 0);
+            
+                const source = offlineContext.createBufferSource();
+                source.buffer = buffer;
+                source.connect(offlineContext.destination);
+                source.start();
+            
+                const resampledBuffer = await offlineContext.startRendering();
+                const resampledData = resampledBuffer.getChannelData(0);
+            
+                // Convert resampled data to 16-bit PCM
+                const pcm = new Int16Array(resampledData.length);
+                for (let i = 0; i < resampledData.length; i++) {
+                    pcm[i] = Math.max(-1, Math.min(1, resampledData[i])) * 0x7FFF;
+                }
+            
+                websocket.send(pcm.buffer);
+            };
+            
+            source.connect(processor);
+            processor.connect(audioContext.destination);
+        });
+
+        document.getElementById('stop').addEventListener('click', () => {
+            if (websocket) {
+                websocket.send("end call");
+                websocket.close();
+            }
+            if (processor) {
+                processor.disconnect();
+            }
+            if (audioContext) {
+                audioContext.close();
+            }
+        });
+    </script>
+</body>
+</html>
