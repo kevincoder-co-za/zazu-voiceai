@@ -22,9 +22,11 @@ class AudioHandler(aai.RealtimeTranscriber):
         self.close()
 
     def on_data(self, transcript: aai.RealtimeTranscript):
+       # When we have a finished sentence, prompt the model and send audio back.
        if isinstance(transcript, aai.RealtimeFinalTranscript) and transcript.text:
             response = self.llm.invoke(transcript.text)
             if response != "":
+                # Convert the models response to an audio file to stream back.
                 self.respond_to_user_prompt(response)
         
     def respond_to_user_prompt(self, transcript):
@@ -34,6 +36,7 @@ class AudioHandler(aai.RealtimeTranscriber):
 
         self.llm.text_to_audio(transcript, tmp_file)        
         
+        # Modify the voice from OpenAI to sound more cartoonish.
         ffmpeg.input(tmp_file).filter('asetrate', 33050).output(cartoonified_version).run()
 
         audio_data = None

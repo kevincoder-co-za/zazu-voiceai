@@ -1,5 +1,6 @@
-flask
-flask-sockets
+openai
+Flask==1.1.4
+Flask-Sockets==0.2.1
 gevent
 gevent-websocket
 assemblyai

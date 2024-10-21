@@ -9,15 +9,22 @@ import settings
 app = Flask(__name__)
 sockets = Sockets(app)
 
+
 @app.route("/dialer")
 def dialer():
+    """
+    Will return an HTML template softphone dialer. A very basic HTML page.
+    """
     return render_template("dialer.html", 
         sample_rate = settings.SAMPLE_RATE,
         socket_url = settings.SOCKET_URL
     )
 
-@sockets.route("/websocket/stream/<token>")
+@sockets.route("/websocket/stream")
 def audio_stream(ws):
+    """
+    The actual websocket to stream the WebRTC session.
+    """
     audio_handler = None
     llm = None
 

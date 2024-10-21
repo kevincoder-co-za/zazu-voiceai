@@ -29,4 +29,5 @@ class OpenAILLM:
             input=text
         )
 
+        #TODO: replace deprecated function with new suggested version.
         response.stream_to_file(audio_file_path)
